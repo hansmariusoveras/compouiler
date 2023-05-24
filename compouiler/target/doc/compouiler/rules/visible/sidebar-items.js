@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["ASCII_ALPHA_LOWER","ASCII_ALPHA_UPPER","ASCII_DIGIT","Assignment","Connect","EOI","Edge","EdgeDefinition","Edges","GraphDefinition","Graphname","NEWLINE","NodeAccess","Nodename","Program","SOI","ShortestPath","Statement","Value","WHITESPACE"]};
