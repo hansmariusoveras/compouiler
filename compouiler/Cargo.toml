@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-lazy_static = "1.4.0"
+fdg-img = "0.4.1"
+fdg-sim = "0.8.0"
 pest = "2.6.0"
 pest_derive = "2.6.0"

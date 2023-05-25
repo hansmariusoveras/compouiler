@@ -1,11 +1,11 @@
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
-#[macro_use]
-extern crate lazy_static;
 
 use std::{env, fs, collections::HashMap};
 use pest::{Parser, iterators::Pair};
+use fdg_img::{self, style::{TextStyle, BLACK, Color, IntoFont, text_anchor::{Pos, HPos, VPos}}, Settings};
+use fdg_sim::{ForceGraph, ForceGraphHelper, petgraph::Undirected};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -37,7 +37,7 @@ struct Context {
     graph: Option<String>,
     graphs: HashMap<String, NodeTable>,
     variables: Vec<i32>,
-    edges: Vec<(i32, i32)>
+    edges: Vec<(i32, i32)>,
 }
 
 
@@ -136,7 +136,15 @@ fn parse(rule: Pair<Rule>, node: &mut Node, context: &mut Context) {
                 context.variables[left as usize] = right;
                 node.children.push(assignment_node);
             },
-            Rule::Connect => {},
+            Rule::Connect => {
+                let mut connection_node = new_empty_node(NodeKind::Connection);
+                parse(record, &mut connection_node, context);
+                let left = connection_node.children[0].load;
+                let right = connection_node.children[1].load;
+                context.edges.push((left, right));
+
+
+            },
             Rule::ShortestPath => {},
             Rule::Value => {
                 parse(record, node, context);
@@ -211,4 +219,24 @@ fn main() {
     print_tables(&context);
     print_edges(&context);
     print_ast(&mut root, 0);
+
+    let mut graph:ForceGraph<(), ()> = ForceGraph::default();
+    let mut nodes = Vec::new();
+    for i in 0..context.variables.len() {
+        nodes.push(graph.add_force_node(i.to_string(), ()));
+    }
+    for edge in &context.edges {
+        graph.add_edge(nodes[edge.0 as usize], nodes[edge.1 as usize], ());
+    }
+    let text_style = Some(TextStyle {
+        font: ("sans-serif", 20).into_font(),
+        color: BLACK.to_backend_color(),
+        pos: Pos {
+            h_pos: HPos::Left,
+            v_pos: VPos::Center,
+        },
+    });
+    let svg = fdg_img::gen_image(graph, Some(Settings{text_style,..Default::default()}));
+    // save the svg on disk (or send it to an svg renderer)
+    fs::write("ring.svg", svg.unwrap().as_bytes()).unwrap();
 }

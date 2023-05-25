@@ -1,16 +1,6 @@
-G1: {
-  a-b,
-  c-d,
-  d-e,
-  e-f,
-  f-g,
-  g-h,
-  h-a
-};
-G2: {
-  a-b,
-  b-c,
-  c-d,
-  d-e,
-  e-a
-};
+G1: {a-b,b-c,c-a};
+G2: {a-b,b-c,c-a};
+G3: {a-b,b-c,c-a};
+
+G1.a + G2.a;
+G2.a + G3.a;
