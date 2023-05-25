@@ -5,7 +5,7 @@ extern crate pest_derive;
 use std::{env, fs, collections::HashMap};
 use pest::{Parser, iterators::Pair};
 use fdg_img::{self, style::{TextStyle, BLACK, Color, IntoFont, text_anchor::{Pos, HPos, VPos}}, Settings};
-use fdg_sim::{ForceGraph, ForceGraphHelper, petgraph::Undirected};
+use fdg_sim::{ForceGraph, ForceGraphHelper, petgraph::Directed};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
@@ -21,6 +21,7 @@ pub enum NodeKind {
     Assignment,
     Number,
     Connection,
+    GridDefinition
 }
 
 struct Node {
@@ -93,9 +94,18 @@ fn parse_edge_definition(rule: Pair<Rule>, node: &mut Node, context: &mut Contex
 fn parse_graph_definition(rule: Pair<Rule>, node: &mut Node, context: &mut Context) {
     let mut graph_definition_node = new_empty_node(NodeKind::GraphDefinition);
     parse(rule, &mut graph_definition_node, context);
-
     assert!(node.kind == NodeKind::Root);
     node.children.push(graph_definition_node);
+}
+
+fn get_value(node: &mut Node, context: &mut Context) -> i32 {
+    if node.kind == NodeKind::Number {
+        return node.load;
+    } else if node.kind == NodeKind::Node {
+        return context.variables[node.load as usize];
+    } else {
+        panic!("Invalid value");
+    }
 }
 
 fn parse(rule: Pair<Rule>, node: &mut Node, context: &mut Context) {
@@ -122,30 +132,68 @@ fn parse(rule: Pair<Rule>, node: &mut Node, context: &mut Context) {
                 parse(record, &mut assignment_node, context);
                 let left = assignment_node.children[0].load;
                 let right: i32;
-                match assignment_node.children[1].kind {
-                    NodeKind::Number => {
-                        right = assignment_node.children[1].load;
-                    },
-                    NodeKind::Node => {
-                        right = context.variables[assignment_node.children[1].load as usize];
-                    },
-                    _ => {
-                        panic!("Invalid assignment");
-                    }
-                }
+                right = get_value(&mut assignment_node.children[1], context);
                 context.variables[left as usize] = right;
                 node.children.push(assignment_node);
             },
             Rule::Connect => {
                 let mut connection_node = new_empty_node(NodeKind::Connection);
                 parse(record, &mut connection_node, context);
-                let left = connection_node.children[0].load;
+                let mut left = connection_node.children[0].load;
                 let right = connection_node.children[1].load;
+                if connection_node.children.len() == 3 {
+                    let child = &mut connection_node.children[2];
+                    let count = get_value( child, context);
+                    
+                    let mut pointer: i32;
+                    for _ in 1..count {
+                        pointer = context.variables.len() as i32;
+                        context.variables.push(0);
+                        context.edges.push((left, pointer));
+                        left = pointer;
+                    }
+                }
+                
                 context.edges.push((left, right));
+                node.children.push(connection_node);
 
 
             },
             Rule::ShortestPath => {},
+
+            Rule::Grid => {
+                let mut grid_node = new_empty_node(NodeKind::GridDefinition);
+                let graph = context.graph.clone().as_ref().unwrap().clone();
+                parse(record, &mut grid_node, context);
+                let width = get_value(&mut grid_node.children[0], context);
+                let height = get_value(&mut grid_node.children[1], context);
+                let base = context.variables.len() as i32;
+
+                context.graph = Some(graph);
+                let table = context.graphs.get_mut(context.graph.as_ref().unwrap()).unwrap();
+
+                let mut prev: i32 = base;
+                let mut pointer: i32 = prev + 1;
+                for y in 0..height {
+                    context.variables.push(0);
+                    table.symbols.insert(format!("0x{}", y), prev);
+                    for x in 1..width {
+                        context.variables.push(0);
+                        table.symbols.insert(format!("{}x{}", x, y), pointer);
+                        context.edges.push((prev, pointer));
+                        prev = pointer;
+                        pointer += 1;
+                    }
+                prev += 1;
+                pointer += 1;
+                }
+
+                for ptr in 0..width*(height-1) {
+                    context.edges.push((base + ptr, base + ptr + width))
+                }
+
+                node.children.push(grid_node);
+            }
             Rule::Value => {
                 parse(record, node, context);
             },
@@ -228,7 +276,7 @@ fn main() {
     for edge in &context.edges {
         graph.add_edge(nodes[edge.0 as usize], nodes[edge.1 as usize], ());
     }
-    let text_style = Some(TextStyle {
+   let text_style = Some(TextStyle {
         font: ("sans-serif", 20).into_font(),
         color: BLACK.to_backend_color(),
         pos: Pos {
@@ -236,7 +284,7 @@ fn main() {
             v_pos: VPos::Center,
         },
     });
-    let svg = fdg_img::gen_image(graph, Some(Settings{text_style,..Default::default()}));
+    let svg = fdg_img::gen_image(graph, Some(Settings {text_style, ..Settings::default() }));
     // save the svg on disk (or send it to an svg renderer)
     fs::write("ring.svg", svg.unwrap().as_bytes()).unwrap();
 }

@@ -1,6 +1,6 @@
-G1: {a-b,b-c,c-a};
-G2: {a-b,b-c,c-a};
-G3: {a-b,b-c,c-a};
+Consts: {width-height};
+Consts.width = 4;
+Consts.height = 5;
+Grid: GRID Consts.width x Consts.height;
 
-G1.a + G2.a;
-G2.a + G3.a;
+Consts.width + Grid.0x0;

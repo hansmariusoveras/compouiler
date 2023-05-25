@@ -1,19 +1,19 @@
 Program   = { SOI ~ Statement+ ~ EOI }
 Statement = { (GraphDefinition | Assignment | Connect | ShortestPath) ~ ";" }
-
-GraphDefinition = { Graphname ~ ":" ~ "{" ~ Edges ~ "}" }
+GraphDefinition = { Graphname ~ ":" ~ ("{" ~ Edges ~ "}" | Grid)}
 Edges           = { (EdgeDefinition ~ "," ~ Edges) | EdgeDefinition }
 EdgeDefinition  = { Nodename ~ "-" ~ Nodename }
 
 Assignment   = { NodeAccess ~ "=" ~ Value }
-Connect      = { NodeAccess ~ "+" ~ NodeAccess }
+Connect      = { NodeAccess ~ "+" ~ NodeAccess ~ ("(" ~ Value ~ ")")?}
 ShortestPath = { "?" ~ "(" ~ Edge ~ ")" }
+Grid = {"GRID" ~ Value ~ ("x"|"X") ~ Value}
 
 Number = { "-"? ~ ASCII_DIGIT+ }
 Value      = { Number | NodeAccess }
 NodeAccess = { Graphname ~ "." ~ Nodename }
 Edge       = { NodeAccess ~ "-" ~ NodeAccess }
 
-Nodename   =  @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | ASCII_DIGIT)* }
-Graphname  =  @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
+Nodename   =  @{ (ASCII_ALPHA_LOWER | ASCII_DIGIT)+ }
+Graphname  =  @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA | ASCII_DIGIT)* }
 WHITESPACE = _{ " " | NEWLINE }
