@@ -9,10 +9,11 @@ Assignment   = { NodeAccess ~ "=" ~ Value }
 Connect      = { NodeAccess ~ "+" ~ NodeAccess }
 ShortestPath = { "?" ~ "(" ~ Edge ~ ")" }
 
-Value      = { "-"? ~ ASCII_DIGIT+ | NodeAccess }
+Number = { "-"? ~ ASCII_DIGIT+ }
+Value      = { Number | NodeAccess }
 NodeAccess = { Graphname ~ "." ~ Nodename }
 Edge       = { NodeAccess ~ "-" ~ NodeAccess }
 
-Nodename   =  { ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | ASCII_DIGIT)* }
-Graphname  =  { ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
+Nodename   =  @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | ASCII_DIGIT)* }
+Graphname  =  @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHA_UPPER | ASCII_DIGIT)* }
 WHITESPACE = _{ " " | NEWLINE }
